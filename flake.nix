@@ -17,6 +17,26 @@
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in
     {
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = pkgs.buildGoModule {
+            pname = "bingo";
+            version = "0.1.0";
+            src = ./.;
+            vendorHash = "sha256-gd1OBd1grvaNV2zCedPvtQ0+yRVXyN6+ijcpaTNVw+E=";
+            subPackages = [ "cmd/server" ];
+            postInstall = ''
+              mkdir -p $out/share/bingo
+              cp schema.sql $out/share/bingo/
+              cp -r web $out/share/bingo/
+            '';
+          };
+        }
+      );
       devShells = forAllSystems (
         system:
         let
@@ -48,24 +68,71 @@
           pkgs,
           ...
         }:
+        with lib;
+        let
+          cfg = config.services.bingo;
+        in
         {
-          services.nginx = {
-            enable = true;
-            upstreams."bingo_backend" = {
-              servers = {
-                "127.0.0.1:8080" = { };
-              };
-              extraConfig = ''
-                hash $uri consistent;
-              '';
+          options.services.bingo = {
+            enable = mkEnableOption "Bingo service";
+            package = mkOption {
+              type = types.package;
+              default = self.packages.${pkgs.system}.default;
+              description = "The bingo package to use";
             };
-            virtualHosts."bingo.local" = {
-              locations."/" = {
-                proxyPass = "http://bingo_backend";
-                proxyWebsockets = true;
+            port = mkOption {
+              type = types.port;
+              default = 8080;
+              description = "Port to listen on";
+            };
+            databaseUrl = mkOption {
+              type = types.str;
+              default = "postgres://postgres:postgres@localhost:5432/bingo?sslmode=disable";
+              description = "Database URL";
+            };
+            domain = mkOption {
+              type = types.str;
+              default = "bingo.local";
+              description = "Domain name for the Nginx virtual host";
+            };
+          };
+
+          config = mkIf cfg.enable {
+            systemd.services.bingo = {
+              description = "Bingo backend service";
+              wantedBy = [ "multi-user.target" ];
+              after = [ "network.target" ];
+              environment = {
+                PORT = toString cfg.port;
+                DATABASE_URL = cfg.databaseUrl;
+              };
+              serviceConfig = {
+                ExecStart = "${cfg.package}/bin/server";
+                WorkingDirectory = "${cfg.package}/share/bingo";
+                Restart = "on-failure";
+                DynamicUser = true;
+              };
+            };
+
+            services.nginx = {
+              enable = true;
+              upstreams."bingo_backend" = {
+                servers = {
+                  "127.0.0.1:${toString cfg.port}" = { };
+                };
+                extraConfig = ''
+                  hash $uri consistent;
+                '';
+              };
+              virtualHosts."${cfg.domain}" = {
+                locations."/" = {
+                  proxyPass = "http://bingo_backend";
+                  proxyWebsockets = true;
+                };
               };
             };
           };
         };
+
     };
 }
