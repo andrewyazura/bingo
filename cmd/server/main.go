@@ -57,7 +57,12 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	slog.Info("🎮 Starting Bingo Server", slog.String("port", "8080"))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	slog.Info("🎮 Starting Bingo Server", slog.String("port", port))
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 
@@ -70,7 +75,7 @@ func main() {
 
 	handler := web.LoggerMiddleware(mux)
 
-	if err := http.ListenAndServe("0.0.0.0:8080", handler); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:"+port, handler); err != nil {
 		slog.Error("Server failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
