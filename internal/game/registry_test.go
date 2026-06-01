@@ -1,12 +1,13 @@
 package game
 
 import (
+	"log/slog"
 	"sync"
 	"testing"
 )
 
 func TestRegistryActor_GetNonExistent(t *testing.T) {
-	registry := NewRegistryActor()
+	registry := NewRegistryActor(slog.Default())
 	go registry.Run()
 
 	replyChan := make(chan *RoomActor, 1)
@@ -23,7 +24,7 @@ func TestRegistryActor_GetNonExistent(t *testing.T) {
 }
 
 func TestRegistryActor_CreateAndGet(t *testing.T) {
-	registry := NewRegistryActor()
+	registry := NewRegistryActor(slog.Default())
 	go registry.Run()
 
 	config := RoomConfig{
@@ -59,7 +60,7 @@ func TestRegistryActor_CreateAndGet(t *testing.T) {
 }
 
 func TestRegistryActor_CreateRace(t *testing.T) {
-	registry := NewRegistryActor()
+	registry := NewRegistryActor(slog.Default())
 	go registry.Run()
 
 	config := RoomConfig{

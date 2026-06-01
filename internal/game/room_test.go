@@ -1,13 +1,14 @@
 package game
 
 import (
+	"log/slog"
 	"testing"
 )
 
 func TestActor_CollaborativeInit(t *testing.T) {
 	words := generateWordlist(25)
 
-	actor, err := NewRoomActor(Collaborative, 5, words, false)
+	actor, err := NewRoomActor(Collaborative, 5, words, false, slog.Default())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -20,7 +21,7 @@ func TestActor_CollaborativeInit(t *testing.T) {
 func TestActor_CompetitiveJoin(t *testing.T) {
 	words := generateWordlist(25)
 
-	actor, err := NewRoomActor(Competitive, 5, words, false)
+	actor, err := NewRoomActor(Competitive, 5, words, false, slog.Default())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -42,7 +43,7 @@ func TestActor_CompetitiveJoin(t *testing.T) {
 func TestActor_MarkAndEvents(t *testing.T) {
 	words := generateWordlist(25)
 
-	actor, err := NewRoomActor(Competitive, 5, words, false)
+	actor, err := NewRoomActor(Competitive, 5, words, false, slog.Default())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
