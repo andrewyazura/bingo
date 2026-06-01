@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo | Error</title>
+    <link id="theme-css" rel="stylesheet" href="/static/modern.css">
+    <style>
+        body.cs16-theme {
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        body.cs16-theme .window {
+            max-width: 500px;
+            width: 100%;
+        }
+        .container {
+            max-width: 500px;
+            margin: 40px auto;
+        }
+        .error-message {
+            margin: 20px 0;
+            font-size: 1.2rem;
+            color: #d32f2f;
+        }
+        body.cs16-theme .error-message {
+            color: #ff4a4a;
+        }
+        .actions {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+    <script>
+        function applyTheme() {
+            const theme = localStorage.getItem('theme') || 'modern';
+            const link = document.getElementById('theme-css');
+            if (theme === 'cs16') {
+                link.href = "https://cdn.jsdelivr.net/gh/ekmas/cs16.css@main/css/cs16.min.css";
+                document.body.classList.add('cs16-theme');
+            } else {
+                link.href = "/static/modern.css";
+                document.body.classList.remove('cs16-theme');
+            }
+        }
+        document.addEventListener('DOMContentLoaded', applyTheme);
+    </script>
+</head>
+<body>
+    <div class="window container">
+        <div class="title-bar">
+            <div class="title-bar-text">Error {{.StatusCode}}</div>
+            <div class="title-bar-controls">
+                <button aria-label="Close"></button>
+            </div>
+        </div>
+        <div class="window-body">
+            <header class="header" style="margin-bottom: 20px;">
+                <h1>Something went wrong</h1>
+            </header>
+            
+            <div class="error-message">
+                {{.Message}}
+            </div>
+
+            <div class="actions">
+                <a href="/" class="cs-btn" style="text-decoration: none; display: inline-block;">Return Home</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

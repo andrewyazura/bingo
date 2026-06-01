@@ -10,12 +10,30 @@ import (
 	"strings"
 
 	"bingo/internal/platform/web"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func generateSlug() string {
 	bytes := make([]byte, 4)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
+}
+
+func renderError(w http.ResponseWriter, message string, statusCode int) {
+	tmpl, err := template.ParseFiles("web/templates/error.html")
+	if err != nil {
+		http.Error(w, message, statusCode)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(statusCode)
+	tmpl.Execute(w, struct {
+		Message    string
+		StatusCode int
+	}{
+		Message:    message,
+		StatusCode: statusCode,
+	})
 }
 
 func getOrSetPlayerID(w http.ResponseWriter, r *http.Request) string {
@@ -51,7 +69,7 @@ func BuildHandleIndex() http.HandlerFunc {
 func BuildHandleCreateRoom(saveLobby func(slug string, config RoomConfig) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Failed to parse form", http.StatusBadRequest)
+			renderError(w, "Failed to parse form", http.StatusBadRequest)
 			return
 		}
 
@@ -78,14 +96,26 @@ func BuildHandleCreateRoom(saveLobby func(slug string, config RoomConfig) error)
 
 		slug := generateSlug()
 
+		password := r.FormValue("password")
+		var hashedPassword string
+		if password != "" {
+			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			if err != nil {
+				renderError(w, "Failed to hash password", http.StatusInternalServerError)
+				return
+			}
+			hashedPassword = string(hash)
+		}
+
 		err := saveLobby(slug, RoomConfig{
 			Mode:      RoomMode(mode),
 			Size:      size,
 			Wordlist:  wordlist,
 			FreeSpace: freeSpace,
+			Password:  hashedPassword,
 		})
 		if err != nil {
-			http.Error(w, "Failed to save lobby", http.StatusInternalServerError)
+			renderError(w, "Failed to save lobby", http.StatusInternalServerError)
 			traceID, _ := r.Context().Value(web.TraceIDKey).(string)
 			slog.Error("Failed to save lobby", slog.String("trace_id", traceID), slog.String("error", err.Error()))
 			return
@@ -95,15 +125,39 @@ func BuildHandleCreateRoom(saveLobby func(slug string, config RoomConfig) error)
 	}
 }
 
-func BuildHandleViewRoom() http.HandlerFunc {
+func BuildHandleViewRoom(getLobby func(slug string) (RoomConfig, error), checkRoomAccess func(string, string) (bool, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
 
-		getOrSetPlayerID(w, r)
+		playerID := getOrSetPlayerID(w, r)
+
+		config, err := getLobby(slug)
+		if err != nil {
+			renderError(w, "Room not found", http.StatusNotFound)
+			return
+		}
+
+		if config.HasPassword {
+			hasAccess, err := checkRoomAccess(slug, playerID)
+			if err != nil {
+				renderError(w, "Error checking access", http.StatusInternalServerError)
+				return
+			}
+			if !hasAccess {
+				tmpl, err := template.ParseFiles("web/templates/password_prompt.html")
+				if err != nil {
+					renderError(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				w.Header().Set("Content-Type", "text/html")
+				tmpl.Execute(w, struct{ Slug string }{Slug: slug})
+				return
+			}
+		}
 
 		tmpl, err := template.ParseFiles("web/templates/room.html")
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			renderError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -112,10 +166,19 @@ func BuildHandleViewRoom() http.HandlerFunc {
 	}
 }
 
-func BuildHandleRoomWS(registry *RegistryActor, getLobby func(slug string) (RoomConfig, error)) http.HandlerFunc {
+func BuildHandleRoomWS(registry *RegistryActor, getLobby func(slug string) (RoomConfig, error), checkRoomAccess func(string, string) (bool, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
 		playerID := getOrSetPlayerID(w, r)
+
+		config, err := getLobby(slug)
+		if err == nil && config.HasPassword {
+			hasAccess, err := checkRoomAccess(slug, playerID)
+			if err != nil || !hasAccess {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+		}
 
 		replyChan := make(chan *RoomActor, 1)
 
@@ -148,5 +211,50 @@ func BuildHandleRoomWS(registry *RegistryActor, getLobby func(slug string) (Room
 		}
 
 		ServeWS(actor, playerID, w, r)
+	}
+}
+
+func BuildHandleAuthRoom(getRoomPasswordHash func(string) (string, error), grantRoomAccess func(string, string) error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		slug := r.PathValue("slug")
+		playerID := getOrSetPlayerID(w, r)
+
+		if err := r.ParseForm(); err != nil {
+			renderError(w, "Failed to parse form", http.StatusBadRequest)
+			return
+		}
+
+		password := r.FormValue("password")
+		if password == "" {
+			renderError(w, "Password is required", http.StatusBadRequest)
+			return
+		}
+
+		hash, err := getRoomPasswordHash(slug)
+		if err != nil {
+			renderError(w, "Room not found or error", http.StatusInternalServerError)
+			return
+		}
+
+		if hash == "" {
+			// Room has no password
+			http.Redirect(w, r, fmt.Sprintf("/room/%s", slug), http.StatusSeeOther)
+			return
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+		if err != nil {
+			// Incorrect password, just re-render or redirect back
+			renderError(w, "Incorrect password", http.StatusUnauthorized)
+			return
+		}
+
+		err = grantRoomAccess(slug, playerID)
+		if err != nil {
+			renderError(w, "Failed to grant access", http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, fmt.Sprintf("/room/%s", slug), http.StatusSeeOther)
 	}
 }

@@ -3,10 +3,12 @@ package game
 import "log/slog"
 
 type RoomConfig struct {
-	Mode      RoomMode
-	Size      int
-	Wordlist  []string
-	FreeSpace bool
+	Mode        RoomMode
+	Size        int
+	Wordlist    []string
+	FreeSpace   bool
+	Password    string `json:"-"` // Used for creation
+	HasPassword bool   // Used for view to know if it's protected
 }
 
 type RegistryCommandType int

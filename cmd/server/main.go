@@ -26,24 +26,12 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	_, err = dbConn.Exec(`
-		CREATE TABLE IF NOT EXISTS rooms (
-			slug TEXT PRIMARY KEY,
-			mode INT NOT NULL,
-			size INT NOT NULL,
-			wordlist JSONB NOT NULL,
-			free_space BOOLEAN NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS game_events (
-			id SERIAL PRIMARY KEY,
-			room_slug TEXT REFERENCES rooms(slug),
-			player_id TEXT NOT NULL,
-			event_type INT NOT NULL,
-			tile_index INT NOT NULL,
-			tile_word TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		);
-	`)
+	schema, err := os.ReadFile("schema.sql")
+	if err != nil {
+		slog.Error("Failed to read schema.sql", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	_, err = dbConn.Exec(string(schema))
 	if err != nil {
 		slog.Error("Failed to run migrations", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -51,6 +39,18 @@ func main() {
 
 	saveLobby := db.BuildSaveLobbyClosure(dbConn)
 	getLobby := db.BuildGetLobbyClosure(dbConn)
+
+	checkRoomAccess := func(slug string, playerID string) (bool, error) {
+		return db.CheckRoomAccess(dbConn, slug, playerID)
+	}
+
+	grantRoomAccess := func(slug string, playerID string) error {
+		return db.GrantRoomAccess(dbConn, slug, playerID)
+	}
+
+	getRoomPasswordHash := func(slug string) (string, error) {
+		return db.GetRoomPasswordHash(dbConn, slug)
+	}
 
 	registry := game.NewRegistryActor(slog.Default())
 	go registry.Run()
@@ -63,8 +63,9 @@ func main() {
 
 	mux.HandleFunc("GET /", game.BuildHandleIndex())
 	mux.HandleFunc("POST /rooms", game.BuildHandleCreateRoom(saveLobby))
-	mux.HandleFunc("GET /room/{slug}", game.BuildHandleViewRoom())
-	mux.HandleFunc("GET /ws/room/{slug}", game.BuildHandleRoomWS(registry, getLobby))
+	mux.HandleFunc("GET /room/{slug}", game.BuildHandleViewRoom(getLobby, checkRoomAccess))
+	mux.HandleFunc("POST /room/{slug}/auth", game.BuildHandleAuthRoom(getRoomPasswordHash, grantRoomAccess))
+	mux.HandleFunc("GET /ws/room/{slug}", game.BuildHandleRoomWS(registry, getLobby, checkRoomAccess))
 
 	handler := web.LoggerMiddleware(mux)
 
