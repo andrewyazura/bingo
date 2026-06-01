@@ -211,7 +211,7 @@
         }
     </style>
 </head>
-<body hx-ext="ws" ws-connect="/ws/room/{{.Slug}}">
+<body hx-ext="ws" ws-connect="/ws/room/{{.Slug}}" hx-on:htmx:ws-open="document.getElementById('connection-status').style.display='none'">
     <div class="window" style="max-width: 800px;">
         <div class="title-bar">
             <div class="title-bar-text">Bingo Room - {{.Slug}}</div>
@@ -225,7 +225,7 @@
             <header class="header">
                 <div>
                     <h1>Room: {{.Slug}}</h1>
-                    <label style="display: block; margin-top: 4px;">Connecting to server...</label>
+                    <label id="connection-status" style="display: block; margin-top: 4px;">Connecting to server...</label>
                 </div>
                 <div class="controls">
                     <button class="cs-btn" id="copy-btn" onclick="copyLink()">Copy Link</button>
