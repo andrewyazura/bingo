@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo | Room</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <link id="theme-css" rel="stylesheet" href="/static/modern.css">
+    <style>
+        body.cs16-theme {
+            padding: 40px 20px;
+        }
+        body.cs16-theme .window {
+            margin: 0 auto;
+        }
+        body.cs16-theme .tile {
+            background-color: var(--secondary-bg);
+            border-color: var(--border-light) var(--border-dark) var(--border-dark) var(--border-light);
+            color: var(--text);
+            border-style: solid;
+            border-width: 2px;
+            border-radius: 0; 
+        }
+        body.cs16-theme .tile:hover {
+            background-color: var(--scrollbar-track);
+        }
+        body.cs16-theme .tile.marked {
+            background-color: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+    </style>
+    <script>
+        function toggleTheme() {
+            const current = localStorage.getItem('theme') || 'modern';
+            const next = current === 'modern' ? 'cs16' : 'modern';
+            localStorage.setItem('theme', next);
+            applyTheme(next);
+        }
+        function applyTheme(theme) {
+            const link = document.getElementById('theme-css');
+            if (theme === 'cs16') {
+                link.href = "https://cdn.jsdelivr.net/gh/ekmas/cs16.css@main/css/cs16.min.css";
+                document.body.classList.add('cs16-theme');
+            } else {
+                link.href = "/static/modern.css";
+                document.body.classList.remove('cs16-theme');
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme(localStorage.getItem('theme') || 'modern');
+        });
+        
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href);
+            const btn = document.getElementById('copy-btn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Copied!';
+            setTimeout(() => { btn.innerText = originalText; }, 2000);
+        }
+    </script>
+    <style>
+        .board {
+            display: grid;
+            gap: 8px;
+            margin-top: 24px;
+            width: 100%;
+        }
+        .tile {
+            aspect-ratio: 1 / 1;
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4px;
+            font-size: clamp(10px, 2.5vw, 14px);
+            font-weight: 600;
+            cursor: pointer;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+            hyphens: auto;
+            overflow: hidden;
+            transition: transform 0.1s, border-color 0.2s, background-color 0.2s;
+            /* Remove default button styles */
+            outline: none;
+        }
+        .tile:hover {
+            border-color: var(--accent-color);
+            background-color: #333;
+        }
+        .tile.marked {
+            background-color: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop {
+            0% { transform: scale(0.9); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+        #victory-modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .victory-text {
+            font-size: 64px;
+            font-weight: 900;
+            color: var(--accent-color);
+            text-shadow: 0 0 20px var(--accent-color);
+            margin-bottom: 24px;
+            animation: pop 0.5s ease-out;
+        }
+    </style>
+</head>
+<body hx-ext="ws" ws-connect="/ws/room/{{.Slug}}">
+    <div class="window" style="max-width: 800px;">
+        <div class="title-bar">
+            <div class="title-bar-text">Bingo Room - {{.Slug}}</div>
+            <div class="title-bar-controls">
+                <button aria-label="Minimize"></button>
+                <button aria-label="Maximize"></button>
+                <button aria-label="Close"></button>
+            </div>
+        </div>
+        <div class="window-body">
+            <header class="header">
+                <div>
+                    <h1>Room: {{.Slug}}</h1>
+                    <label style="display: block; margin-top: 4px;">Connecting to server...</label>
+                </div>
+                <div class="controls">
+                    <button class="cs-btn" id="copy-btn" onclick="copyLink()">Copy Link</button>
+                    <button class="cs-btn" onclick="toggleTheme()">Theme</button>
+                </div>
+            </header>
+            
+            <!-- The board will be injected here by the WebSocket -->
+            <div id="game-board-container">
+                <div style="padding: 40px; text-align: center; color: #aaa;">
+                    Waiting for game state from server...
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

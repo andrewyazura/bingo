@@ -1,0 +1,98 @@
+:root {
+    --bg-color: #121212;
+    --card-bg: #1e1e1e;
+    --text-color: #ffffff;
+    --accent-color: #00e5ff;
+    --border-color: #333333;
+}
+body {
+    margin: 0;
+    padding: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Inter', system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+.window {
+    background-color: var(--card-bg);
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    box-sizing: border-box;
+}
+/* Title bar is only for CS16 theme, hidden in modern */
+.title-bar { display: none; }
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+h1 { margin: 0; font-size: 24px; font-weight: 600; }
+.field-row {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+label { font-weight: 500; font-size: 14px; color: #aaaaaa; }
+input[type="number"], select, textarea {
+    background-color: #2a2a2a;
+    border: 1px solid var(--border-color);
+    color: white;
+    padding: 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+input[type="number"]:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+.field-row-checkbox {
+    flex-direction: row;
+    align-items: center;
+}
+.field-row-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent-color);
+}
+.submit-btn {
+    background-color: var(--accent-color);
+    color: #000;
+    border: none;
+    padding: 16px;
+    width: 100%;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+    margin-top: 10px;
+}
+.submit-btn:hover {
+    opacity: 0.9;
+}
+.submit-btn:active {
+    transform: scale(0.98);
+}
+.cs-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+}
+.cs-btn:hover { border-color: var(--text-color); }
