@@ -114,20 +114,18 @@ func RenderEvent(e Event, receiverID string, size int) string {
 			}
 			msg = template.HTMLEscapeString(label) + " got BINGO!"
 		}
-		return fmt.Sprintf(`
-		<div id="victory-modal" hx-swap-oob="true">
-			<div class="victory-text">%s</div>
-			<button class="cs-btn" onclick="document.getElementById('victory-modal').remove()">Keep Playing</button>
+		return fmt.Sprintf(`<div id="toast-container" hx-swap-oob="beforeend">
+			<div class="toast" style="animation: slide-in 0.3s ease-out, fade-out 0.5s ease-in 4.5s forwards; border-color: gold; color: gold;">%s</div>
 		</div>`, msg)
 
 	case OneToBingoEvent:
 		label := "You are"
 		if e.PlayerID != receiverID {
-			label := e.PlayerName
-			if label == "" {
-				label = e.PlayerID
+			name := e.PlayerName
+			if name == "" {
+				name = e.PlayerID
 			}
-			label = template.HTMLEscapeString(label) + " is"
+			label = template.HTMLEscapeString(name) + " is"
 		}
 		return fmt.Sprintf(`<div id="toast-container" hx-swap-oob="beforeend">
 			<div class="toast" style="animation: slide-in 0.3s ease-out, fade-out 0.5s ease-in 4.5s forwards;">%s one tile away from BINGO!</div>
