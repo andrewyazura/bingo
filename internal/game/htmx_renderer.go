@@ -28,9 +28,28 @@ func RenderTile(index int, word string, marked bool, isOOB bool) string {
 	`, index, class, index, oob, template.HTMLEscapeString(word))
 }
 
-func RenderEvent(e Event, size int) string {
+func RenderMiniTileOOB(playerID string, index int, marked bool) string {
+	class := "mini-tile"
+	if marked {
+		class = "mini-tile marked"
+	}
+	return fmt.Sprintf(`<div id="mini-tile-%s-%d" class="%s" hx-swap-oob="true"></div>`, template.HTMLEscapeString(playerID), index, class)
+}
+
+func RenderMiniTile(playerID string, index int, marked bool) string {
+	class := "mini-tile"
+	if marked {
+		class = "mini-tile marked"
+	}
+	return fmt.Sprintf(`<div id="mini-tile-%s-%d" class="%s"></div>`, template.HTMLEscapeString(playerID), index, class)
+}
+
+func RenderEvent(e Event, receiverID string, size int) string {
 	switch e.Type {
 	case BoardStateEvent:
+		if e.PlayerID != receiverID {
+			return ""
+		}
 		var buf bytes.Buffer
 		fmt.Fprintf(&buf, `<div id="game-board-container" class="board" style="grid-template-columns: repeat(%d, 1fr);" hx-swap-oob="true">`, size)
 		for i, word := range e.Board.Words {
@@ -39,11 +58,49 @@ func RenderEvent(e Event, size int) string {
 		buf.WriteString(`</div>`)
 		return buf.String()
 
+	case OpponentBoardsStateEvent:
+		if len(e.Opponents) == 0 {
+			return `<div id="opponents-sidebar" class="opponents-sidebar" hx-swap-oob="true" style="display: none;"></div>`
+		}
+		if len(e.Opponents) > 5 {
+			return `<div id="opponents-sidebar" class="opponents-sidebar" hx-swap-oob="true" style="display: none;"></div>`
+		}
+
+		var buf bytes.Buffer
+		buf.WriteString(`<div id="opponents-sidebar" class="opponents-sidebar" hx-swap-oob="true">`)
+		for _, opp := range e.Opponents {
+			label := opp.PlayerID
+			if len(label) > 10 {
+				label = "Player " + label[len(label)-4:]
+			}
+			buf.WriteString(`<div class="mini-board-wrapper">`)
+			buf.WriteString(fmt.Sprintf(`<div class="mini-board-label">%s</div>`, template.HTMLEscapeString(label)))
+			buf.WriteString(fmt.Sprintf(`<div id="mini-board-%s" class="mini-board" style="grid-template-columns: repeat(%d, 1fr);">`, template.HTMLEscapeString(opp.PlayerID), size))
+			for i := range opp.Board.Words {
+				buf.WriteString(RenderMiniTile(opp.PlayerID, i, opp.Board.Marks[i]))
+			}
+			buf.WriteString(`</div></div>`)
+		}
+		buf.WriteString(`</div>`)
+		return buf.String()
+
 	case TileMarkedEvent:
-		return RenderTile(*e.TileIndex, *e.TileWord, true, true)
+		res := ""
+		if e.PlayerID == receiverID {
+			res += RenderTile(*e.TileIndex, *e.TileWord, true, true)
+		} else {
+			res += RenderMiniTileOOB(e.PlayerID, *e.TileIndex, true)
+		}
+		return res
 
 	case TileUnmarkedEvent:
-		return RenderTile(*e.TileIndex, *e.TileWord, false, true)
+		res := ""
+		if e.PlayerID == receiverID {
+			res += RenderTile(*e.TileIndex, *e.TileWord, false, true)
+		} else {
+			res += RenderMiniTileOOB(e.PlayerID, *e.TileIndex, false)
+		}
+		return res
 
 	case BingoEvent:
 		return `

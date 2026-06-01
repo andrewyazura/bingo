@@ -90,7 +90,7 @@ func (c *ClientActor) writePump() {
 				return
 			}
 
-			html := RenderEvent(event, c.Room.Size)
+			html := RenderEvent(event, c.PlayerID, c.Room.Size)
 			if html != "" {
 				w.Write([]byte(html))
 			}

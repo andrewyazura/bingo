@@ -37,7 +37,13 @@ const (
 	TileMarkedEvent
 	TileUnmarkedEvent
 	BoardStateEvent
+	OpponentBoardsStateEvent
 )
+
+type OpponentBoardState struct {
+	PlayerID string
+	Board    *Board
+}
 
 type Event struct {
 	Type      EventType
@@ -45,6 +51,7 @@ type Event struct {
 	TileIndex *int
 	TileWord  *string
 	Board     *Board
+	Opponents []OpponentBoardState
 }
 
 type RoomActor struct {
@@ -92,6 +99,7 @@ func (a *RoomActor) Run() {
 			delete(a.subscribers, cmd.PlayerID)
 			close(cmd.ReplyTo)
 			a.logger.Info("Player disconnected", slog.String("player_id", cmd.PlayerID))
+			a.broadcastOpponents()
 		case JoinCommand:
 			a.Join(&cmd)
 		case MarkCommand:
@@ -106,6 +114,36 @@ func (a *RoomActor) broadcast(e Event) {
 		case subChan <- e:
 		default:
 			println("Warning: Dropping event for slow client", id)
+		}
+	}
+}
+
+func (a *RoomActor) broadcastOpponents() {
+	if a.Mode == Collaborative {
+		return
+	}
+
+	activePlayers := make([]string, 0)
+	for pID := range a.subscribers {
+		activePlayers = append(activePlayers, pID)
+	}
+
+	for pID, subChan := range a.subscribers {
+		opps := make([]OpponentBoardState, 0)
+		for _, oppID := range activePlayers {
+			if oppID != pID {
+				opps = append(opps, OpponentBoardState{
+					PlayerID: oppID,
+					Board:    a.boards[oppID],
+				})
+			}
+		}
+		select {
+		case subChan <- Event{
+			Type:      OpponentBoardsStateEvent,
+			Opponents: opps,
+		}:
+		default:
 		}
 	}
 }
@@ -144,6 +182,8 @@ func (a *RoomActor) Join(cmd *Command) error {
 		}
 	}
 
+	a.broadcastOpponents()
+
 	return nil
 }
 
@@ -179,7 +219,7 @@ func (a *RoomActor) Mark(cmd *Command) error {
 	if a.Mode == Collaborative {
 		a.broadcast(event)
 	} else {
-		a.sendToPlayer(cmd.PlayerID, event)
+		a.broadcast(event)
 	}
 
 	if !isMarked {

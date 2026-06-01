@@ -30,6 +30,10 @@
             color: #000;
             border-color: var(--accent);
         }
+        body.cs16-theme .mini-tile.marked {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
     </style>
     <script>
         function toggleTheme() {
@@ -127,6 +131,57 @@
             margin-bottom: 24px;
             animation: pop 0.5s ease-out;
         }
+
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .main-board-section {
+            flex: 1;
+        }
+        .opponents-sidebar {
+            display: none; /* Hidden by default (mobile/empty) */
+            width: 150px;
+            flex-direction: column;
+            gap: 16px;
+        }
+        /* Show only on desktop, but htmx_renderer will hide it if > 5 players via inline style */
+        @media (min-width: 1024px) {
+            .opponents-sidebar {
+                display: flex;
+            }
+        }
+        .mini-board-wrapper {
+            background-color: rgba(0, 0, 0, 0.1);
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .mini-board-label {
+            font-size: 12px;
+            margin-bottom: 4px;
+            text-align: center;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mini-board {
+            display: grid;
+            gap: 2px;
+        }
+        .mini-tile {
+            aspect-ratio: 1 / 1;
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            border-radius: 2px;
+            transition: background-color 0.2s;
+        }
+        .mini-tile.marked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
     </style>
 </head>
 <body hx-ext="ws" ws-connect="/ws/room/{{.Slug}}">
@@ -152,9 +207,16 @@
             </header>
             
             <!-- The board will be injected here by the WebSocket -->
-            <div id="game-board-container">
-                <div style="padding: 40px; text-align: center; color: #aaa;">
-                    Waiting for game state from server...
+            <div class="main-layout">
+                <div class="main-board-section">
+                    <div id="game-board-container">
+                        <div style="padding: 40px; text-align: center; color: #aaa;">
+                            Waiting for game state from server...
+                        </div>
+                    </div>
+                </div>
+                <div id="opponents-sidebar" class="opponents-sidebar" style="display: none;">
+                    <!-- Opponents will be injected here -->
                 </div>
             </div>
         </div>
