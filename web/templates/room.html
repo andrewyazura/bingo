@@ -63,6 +63,29 @@
             btn.innerText = 'Copied!';
             setTimeout(() => { btn.innerText = originalText; }, 2000);
         }
+
+        function copyWordleResult() {
+            const tiles = document.querySelectorAll('#game-board-container .tile');
+            if (tiles.length === 0) return;
+            const size = Math.sqrt(tiles.length);
+            let result = `Bingo Room {{.Slug}}\n\n`;
+            for (let i = 0; i < tiles.length; i++) {
+                if (tiles[i].classList.contains('marked')) {
+                    result += '🟩';
+                } else {
+                    result += '⬜';
+                }
+                if ((i + 1) % size === 0) {
+                    result += '\n';
+                }
+            }
+            navigator.clipboard.writeText(result).then(() => {
+                const btn = document.getElementById('share-btn');
+                const originalText = btn.innerText;
+                btn.innerText = 'Copied!';
+                setTimeout(() => { btn.innerText = originalText; }, 2000);
+            });
+        }
     </script>
     <style>
         .board {
@@ -228,6 +251,7 @@
                     <label id="connection-status" style="display: block; margin-top: 4px;">Connecting to server...</label>
                 </div>
                 <div class="controls">
+                    <button class="cs-btn" id="share-btn" onclick="copyWordleResult()">Share Result</button>
                     <button class="cs-btn" id="copy-btn" onclick="copyLink()">Copy Link</button>
                     <button class="cs-btn" onclick="toggleTheme()">Theme</button>
                 </div>
