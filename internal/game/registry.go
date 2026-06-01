@@ -1,6 +1,9 @@
 package game
 
-import "log/slog"
+import (
+	"fmt"
+	"log/slog"
+)
 
 type RoomConfig struct {
 	Mode        RoomMode
@@ -9,6 +12,17 @@ type RoomConfig struct {
 	FreeSpace   bool
 	Password    string `json:"-"` 
 	HasPassword bool   
+}
+
+func (c RoomConfig) Validate() error {
+	requiredWords := c.Size * c.Size
+	if c.FreeSpace {
+		requiredWords--
+	}
+	if len(c.Wordlist) < requiredWords {
+		return fmt.Errorf("Not enough words. You provided %d but need at least %d for a %dx%d board.", len(c.Wordlist), requiredWords, c.Size, c.Size)
+	}
+	return nil
 }
 
 type RegistryCommandType int

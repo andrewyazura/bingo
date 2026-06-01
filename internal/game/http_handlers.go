@@ -107,13 +107,21 @@ func BuildHandleCreateRoom(saveLobby func(slug string, config RoomConfig) error)
 			hashedPassword = string(hash)
 		}
 
-		err := saveLobby(slug, RoomConfig{
+		config := RoomConfig{
 			Mode:      RoomMode(mode),
 			Size:      size,
 			Wordlist:  wordlist,
 			FreeSpace: freeSpace,
 			Password:  hashedPassword,
-		})
+			HasPassword: password != "",
+		}
+
+		if err := config.Validate(); err != nil {
+			renderError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err := saveLobby(slug, config)
 		if err != nil {
 			renderError(w, "Failed to save lobby", http.StatusInternalServerError)
 			traceID, _ := r.Context().Value(web.TraceIDKey).(string)
