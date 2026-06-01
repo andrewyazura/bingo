@@ -182,7 +182,13 @@ func BuildHandleViewRoom(getLobby func(slug string) (RoomConfig, error), checkRo
 		}
 
 		w.Header().Set("Content-Type", "text/html")
-		tmpl.Execute(w, struct{ Slug string }{Slug: slug})
+		tmpl.Execute(w, struct {
+			Slug            string
+			IsCollaborative bool
+		}{
+			Slug:            slug,
+			IsCollaborative: config.Mode == 1,
+		})
 	}
 }
 

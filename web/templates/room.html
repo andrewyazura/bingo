@@ -38,7 +38,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        body.cs16-theme .header h1 {
+            margin: 0;
+            font-size: 20px;
         }
     </style>
     <script>
@@ -93,19 +99,7 @@
             });
         }
 
-        function showTileToast(index, message) {
-            if (!window.lastToastTimes) window.lastToastTimes = {};
-            let now = Date.now();
-            if (now - (window.lastToastTimes[index] || 0) > 10000) {
-                window.lastToastTimes[index] = now;
-                let div = document.createElement('div');
-                div.className = 'toast';
-                div.style = 'animation: slide-in 0.3s ease-out, fade-out 0.5s ease-in 4.5s forwards;';
-                div.innerText = message;
-                document.getElementById('toast-container').appendChild(div);
-                setTimeout(() => div.remove(), 5000);
-            }
-        }
+
     </script>
     <style>
         .board {
@@ -154,6 +148,7 @@
         .controls {
             display: flex;
             gap: 12px;
+            flex-wrap: wrap;
         }
         #victory-modal {
             position: fixed;
@@ -175,52 +170,75 @@
             animation: pop 0.5s ease-out;
         }
 
-        #toast-container {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
+        .event-log-wrapper {
+            grid-area: log;
+            background-color: var(--secondary-bg, #222);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .event-log-wrapper h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 16px;
+            color: var(--text-color);
+        }
+        .event-log {
+            max-height: 200px;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            z-index: 2000;
+            gap: 8px;
         }
-        .toast {
-            background-color: var(--secondary-bg, #222);
-            color: var(--text-color, #eee);
-            padding: 12px 24px;
-            border-radius: 8px;
-            border: 1px solid var(--accent-color, #0f0);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        .log-entry {
+            padding: 8px 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid var(--accent-color);
+            font-size: 14px;
+            border-radius: 0 4px 4px 0;
+            animation: slide-in 0.3s ease-out;
+        }
+        .log-entry.bingo {
+            border-left-color: gold;
+            color: gold;
             font-weight: bold;
         }
-        @keyframes slide-in {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        .log-entry.one-to-bingo {
+            border-left-color: orange;
+            color: orange;
         }
-        @keyframes fade-out {
-            from { opacity: 1; }
-            to { opacity: 0; visibility: hidden; }
+        @keyframes slide-in {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
         .main-layout {
-            display: flex;
+            display: grid;
             gap: 20px;
-            align-items: flex-start;
-            flex-wrap: wrap;
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "board"
+                "sidebar"
+                "log";
         }
         .main-board-section {
-            flex: 1;
-            min-width: 300px;
+            grid-area: board;
         }
         .opponents-sidebar {
+            grid-area: sidebar;
             display: flex;
-            width: 100%;
             flex-direction: row;
             flex-wrap: wrap;
             justify-content: center;
             gap: 16px;
         }
         @media (min-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr auto;
+                grid-template-areas:
+                    "board sidebar"
+                    "log   sidebar";
+            }
             .opponents-sidebar {
                 width: 150px;
                 flex-direction: column;
@@ -295,10 +313,14 @@
                 <div id="opponents-sidebar" class="opponents-sidebar" style="display: none;">
                     
                 </div>
+                {{if not .IsCollaborative}}
+                <div class="event-log-wrapper">
+                    <h3>Activity Log</h3>
+                    <div id="event-log" class="event-log"></div>
+                </div>
+                {{end}}
             </div>
         </div>
     </div>
-    
-    <div id="toast-container"></div>
 </body>
 </html>

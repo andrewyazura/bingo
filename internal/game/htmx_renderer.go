@@ -101,7 +101,7 @@ func RenderEvent(e Event, receiverID string, size int) string {
 				label = e.PlayerID
 			}
 			msg := template.HTMLEscapeString(label) + " marked " + template.HTMLEscapeString(*e.TileWord)
-			res += fmt.Sprintf(`<div id="toast-container" hx-swap-oob="beforeend"><script>showTileToast(%d, "%s"); document.currentScript.remove();</script></div>`, *e.TileIndex, msg)
+			res += fmt.Sprintf(`<div id="event-log" hx-swap-oob="afterbegin"><div class="log-entry">%s</div></div>`, msg)
 		}
 		return res
 
@@ -115,6 +115,9 @@ func RenderEvent(e Event, receiverID string, size int) string {
 		return res
 
 	case BingoEvent:
+		if e.PlayerID == "global" {
+			return ""
+		}
 		msg := "BINGO!"
 		if e.PlayerID != receiverID {
 			label := e.PlayerName
@@ -123,11 +126,14 @@ func RenderEvent(e Event, receiverID string, size int) string {
 			}
 			msg = template.HTMLEscapeString(label) + " got BINGO!"
 		}
-		return fmt.Sprintf(`<div id="toast-container" hx-swap-oob="beforeend">
-			<div class="toast" style="animation: slide-in 0.3s ease-out, fade-out 0.5s ease-in 4.5s forwards; border-color: gold; color: gold;">%s</div>
+		return fmt.Sprintf(`<div id="event-log" hx-swap-oob="afterbegin">
+			<div class="log-entry bingo">%s</div>
 		</div>`, msg)
 
 	case OneToBingoEvent:
+		if e.PlayerID == "global" {
+			return ""
+		}
 		label := "You are"
 		if e.PlayerID != receiverID {
 			name := e.PlayerName
@@ -136,8 +142,8 @@ func RenderEvent(e Event, receiverID string, size int) string {
 			}
 			label = template.HTMLEscapeString(name) + " is"
 		}
-		return fmt.Sprintf(`<div id="toast-container" hx-swap-oob="beforeend">
-			<div class="toast" style="animation: slide-in 0.3s ease-out, fade-out 0.5s ease-in 4.5s forwards;">%s one tile away from BINGO!</div>
+		return fmt.Sprintf(`<div id="event-log" hx-swap-oob="afterbegin">
+			<div class="log-entry one-to-bingo">%s one tile away from BINGO!</div>
 		</div>`, label)
 
 	default:
