@@ -8,7 +8,7 @@ import (
 func TestActor_CollaborativeInit(t *testing.T) {
 	words := generateWordlist(25)
 
-	actor, err := NewRoomActor(Collaborative, 5, words, false, slog.Default())
+	actor, err := NewRoomActor("test-collab", Collaborative, 5, words, false, slog.Default(), nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -21,7 +21,7 @@ func TestActor_CollaborativeInit(t *testing.T) {
 func TestActor_CompetitiveJoin(t *testing.T) {
 	words := generateWordlist(25)
 
-	actor, err := NewRoomActor(Competitive, 5, words, false, slog.Default())
+	actor, err := NewRoomActor("test-comp", Competitive, 5, words, false, slog.Default(), nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -43,7 +43,7 @@ func TestActor_CompetitiveJoin(t *testing.T) {
 func TestActor_MarkAndEvents(t *testing.T) {
 	words := generateWordlist(25)
 
-	actor, err := NewRoomActor(Competitive, 5, words, false, slog.Default())
+	actor, err := NewRoomActor("test-comp", Competitive, 5, words, false, slog.Default(), nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

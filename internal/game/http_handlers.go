@@ -186,7 +186,13 @@ func BuildHandleViewRoom(getLobby func(slug string) (RoomConfig, error), checkRo
 	}
 }
 
-func BuildHandleRoomWS(registry *RegistryActor, getLobby func(slug string) (RoomConfig, error), checkRoomAccess func(string, string) (bool, error)) http.HandlerFunc {
+func BuildHandleRoomWS(
+	registry *RegistryActor,
+	getLobby func(slug string) (RoomConfig, error),
+	checkRoomAccess func(string, string) (bool, error),
+	buildSaveEventClosure func(string) func(Event),
+	loadEventsForRoom func(string) ([]Event, error),
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
 		playerID := getOrSetPlayerID(w, r)
@@ -216,11 +222,18 @@ func BuildHandleRoomWS(registry *RegistryActor, getLobby func(slug string) (Room
 				return
 			}
 
+			events, err := loadEventsForRoom(slug)
+			if err != nil {
+				slog.Error("Failed to load events", slog.String("slug", slug), slog.String("error", err.Error()))
+			}
+
 			registry.Inbox <- RegistryCommand{
-				Type:    CreateRoomCmd,
-				Slug:    slug,
-				Config:  config,
-				ReplyTo: replyChan,
+				Type:          CreateRoomCmd,
+				Slug:          slug,
+				Config:        config,
+				SaveEvent:     buildSaveEventClosure(slug),
+				InitialEvents: events,
+				ReplyTo:       replyChan,
 			}
 			actor = <-replyChan
 

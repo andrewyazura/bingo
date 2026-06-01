@@ -71,7 +71,15 @@ func main() {
 	mux.HandleFunc("GET /room/{slug}", game.BuildHandleViewRoom(getLobby, checkRoomAccess))
 	mux.HandleFunc("POST /room/{slug}/auth", game.BuildHandleAuthRoom(getRoomPasswordHash, grantRoomAccess))
 	mux.HandleFunc("POST /room/{slug}/name", game.BuildHandleNameRoom())
-	mux.HandleFunc("GET /ws/room/{slug}", game.BuildHandleRoomWS(registry, getLobby, checkRoomAccess))
+	buildSaveEventClosure := func(slug string) func(game.Event) {
+		return db.BuildSaveEventClosure(dbConn, slug)
+	}
+
+	loadEventsForRoom := func(slug string) ([]game.Event, error) {
+		return db.LoadEventsForRoom(dbConn, slug)
+	}
+
+	mux.HandleFunc("GET /ws/room/{slug}", game.BuildHandleRoomWS(registry, getLobby, checkRoomAccess, buildSaveEventClosure, loadEventsForRoom))
 
 	handler := web.LoggerMiddleware(mux)
 

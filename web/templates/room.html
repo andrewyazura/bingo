@@ -6,7 +6,7 @@
     <title>Bingo | Room</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/ws.js"></script>
-    <link id="theme-css" rel="stylesheet" href="/static/modern.css">
+    <link id="theme-css" rel="stylesheet" href="/static/modern.css?v=2">
     <style>
         body.cs16-theme {
             padding: 40px 20px;
@@ -34,6 +34,12 @@
             background-color: var(--accent);
             border-color: var(--accent);
         }
+        body.cs16-theme .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
     </style>
     <script>
         function toggleTheme() {
@@ -48,7 +54,7 @@
                 link.href = "https://cdn.jsdelivr.net/gh/ekmas/cs16.css@main/css/cs16.min.css";
                 document.body.classList.add('cs16-theme');
             } else {
-                link.href = "/static/modern.css";
+                link.href = "/static/modern.css?v=2";
                 document.body.classList.remove('cs16-theme');
             }
         }
@@ -85,6 +91,20 @@
                 btn.innerText = 'Copied!';
                 setTimeout(() => { btn.innerText = originalText; }, 2000);
             });
+        }
+
+        function showTileToast(index, message) {
+            if (!window.lastToastTimes) window.lastToastTimes = {};
+            let now = Date.now();
+            if (now - (window.lastToastTimes[index] || 0) > 10000) {
+                window.lastToastTimes[index] = now;
+                let div = document.createElement('div');
+                div.className = 'toast';
+                div.style = 'animation: slide-in 0.3s ease-out, fade-out 0.5s ease-in 4.5s forwards;';
+                div.innerText = message;
+                document.getElementById('toast-container').appendChild(div);
+                setTimeout(() => div.remove(), 5000);
+            }
         }
     </script>
     <style>
@@ -186,20 +206,25 @@
             display: flex;
             gap: 20px;
             align-items: flex-start;
+            flex-wrap: wrap;
         }
         .main-board-section {
             flex: 1;
+            min-width: 300px;
         }
         .opponents-sidebar {
-            display: none; /* Hidden by default (mobile/empty) */
-            width: 150px;
-            flex-direction: column;
+            display: flex;
+            width: 100%;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 16px;
         }
-        /* Show only on desktop, but htmx_renderer will hide it if > 5 players via inline style */
         @media (min-width: 1024px) {
             .opponents-sidebar {
-                display: flex;
+                width: 150px;
+                flex-direction: column;
+                justify-content: flex-start;
             }
         }
         .mini-board-wrapper {
@@ -207,6 +232,8 @@
             padding: 8px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
+            width: 150px;
+            box-sizing: border-box;
         }
         .mini-board-label {
             font-size: 12px;
@@ -257,7 +284,6 @@
                 </div>
             </header>
             
-            <!-- The board will be injected here by the WebSocket -->
             <div class="main-layout">
                 <div class="main-board-section">
                     <div id="game-board-container">
@@ -267,7 +293,7 @@
                     </div>
                 </div>
                 <div id="opponents-sidebar" class="opponents-sidebar" style="display: none;">
-                    <!-- Opponents will be injected here -->
+                    
                 </div>
             </div>
         </div>

@@ -65,6 +65,24 @@ func (b *Board) MarkTile(index int) (*string, bool) {
 	return &b.Words[index], b.Marks[index]
 }
 
+func (b *Board) MarkByWord(word string, marked bool) {
+	if word == "" {
+		for i, w := range b.Words {
+			if w == "" {
+				b.Marks[i] = marked
+				return
+			}
+		}
+		return
+	}
+	for i, w := range b.Words {
+		if w == word {
+			b.Marks[i] = marked
+			return
+		}
+	}
+}
+
 type BoardAnalysis struct {
 	HasBingo  bool
 	MaxInLine int

@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"hash/fnv"
 	"log/slog"
 	"math/rand"
 )
@@ -12,6 +13,14 @@ const (
 	Competitive RoomMode = iota
 	Collaborative
 )
+
+func getSeededShuffle(roomSlug string, playerID string) func(int, func(i, j int)) {
+	h := fnv.New64a()
+	h.Write([]byte(roomSlug + playerID))
+	src := rand.NewSource(int64(h.Sum64()))
+	r := rand.New(src)
+	return r.Shuffle
+}
 
 type CommandType int
 
@@ -58,6 +67,7 @@ type Event struct {
 }
 
 type RoomActor struct {
+	Slug      string
 	Mode      RoomMode
 	Size      int
 	Wordlist  []string
@@ -68,10 +78,13 @@ type RoomActor struct {
 	subscribers map[string]chan Event
 	Inbox       chan Command
 	logger      *slog.Logger
+	saveEvent   func(Event)
+	history     []Event
 }
 
-func NewRoomActor(mode RoomMode, size int, wordlist []string, freeSpace bool, logger *slog.Logger) (*RoomActor, error) {
+func NewRoomActor(slug string, mode RoomMode, size int, wordlist []string, freeSpace bool, logger *slog.Logger, saveEvent func(Event), history []Event) (*RoomActor, error) {
 	actor := &RoomActor{
+		Slug:        slug,
 		Mode:        mode,
 		Size:        size,
 		Wordlist:    wordlist,
@@ -81,17 +94,32 @@ func NewRoomActor(mode RoomMode, size int, wordlist []string, freeSpace bool, lo
 		subscribers: make(map[string]chan Event),
 		Inbox:       make(chan Command, 256),
 		logger:      logger,
+		saveEvent:   saveEvent,
+		history:     history,
 	}
 
 	if mode == Collaborative {
-		board, err := NewBoard(size, wordlist, freeSpace, rand.Shuffle)
+		board, err := NewBoard(size, wordlist, freeSpace, getSeededShuffle(slug, "global"))
 		if err != nil {
 			return nil, err
 		}
+		actor.replayHistory("global", board)
 		actor.boards["global"] = board
 	}
 
 	return actor, nil
+}
+
+func (a *RoomActor) replayHistory(playerID string, board *Board) {
+	for _, e := range a.history {
+		if e.PlayerID == playerID {
+			if e.Type == TileMarkedEvent && e.TileWord != nil {
+				board.MarkByWord(*e.TileWord, true)
+			} else if e.Type == TileUnmarkedEvent && e.TileWord != nil {
+				board.MarkByWord(*e.TileWord, false)
+			}
+		}
+	}
 }
 
 func (a *RoomActor) Run() {
@@ -175,10 +203,11 @@ func (a *RoomActor) Join(cmd *Command) error {
 	board, exists := a.boards[key]
 	if !exists {
 		var err error
-		board, err = NewBoard(a.Size, a.Wordlist, a.FreeSpace, rand.Shuffle)
+		board, err = NewBoard(a.Size, a.Wordlist, a.FreeSpace, getSeededShuffle(a.Slug, cmd.PlayerID))
 		if err != nil {
 			return err
 		}
+		a.replayHistory(key, board)
 		a.boards[key] = board
 	}
 
@@ -228,6 +257,10 @@ func (a *RoomActor) Mark(cmd *Command) error {
 
 	if a.Mode == Collaborative {
 		event.PlayerID = "global"
+	}
+
+	if a.saveEvent != nil {
+		a.saveEvent(event)
 	}
 
 	a.broadcast(event)

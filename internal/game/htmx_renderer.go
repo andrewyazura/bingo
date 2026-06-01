@@ -94,6 +94,15 @@ func RenderEvent(e Event, receiverID string, size int) string {
 		} else {
 			res += RenderMiniTileOOB(e.PlayerID, *e.TileIndex, true)
 		}
+
+		if e.PlayerID != receiverID {
+			label := e.PlayerName
+			if label == "" {
+				label = e.PlayerID
+			}
+			msg := template.HTMLEscapeString(label) + " marked " + template.HTMLEscapeString(*e.TileWord)
+			res += fmt.Sprintf(`<div id="toast-container" hx-swap-oob="beforeend"><script>showTileToast(%d, "%s"); document.currentScript.remove();</script></div>`, *e.TileIndex, msg)
+		}
 		return res
 
 	case TileUnmarkedEvent:

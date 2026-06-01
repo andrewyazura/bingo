@@ -15,6 +15,9 @@ type RoomConfig struct {
 }
 
 func (c RoomConfig) Validate() error {
+	if c.Size%2 == 0 {
+		return fmt.Errorf("Board size must be an odd number. You provided %d.", c.Size)
+	}
 	requiredWords := c.Size * c.Size
 	if c.FreeSpace {
 		requiredWords--
@@ -33,10 +36,12 @@ const (
 )
 
 type RegistryCommand struct {
-	Type    RegistryCommandType
-	Slug    string
-	Config  RoomConfig
-	ReplyTo chan *RoomActor
+	Type          RegistryCommandType
+	Slug          string
+	Config        RoomConfig
+	SaveEvent     func(Event)
+	InitialEvents []Event
+	ReplyTo       chan *RoomActor
 }
 
 type RegistryActor struct {
@@ -66,7 +71,7 @@ func (r *RegistryActor) Run() {
 			}
 
 			roomLogger := r.logger.With("room_slug", cmd.Slug, "mode", cmd.Config.Mode)
-			actor, err := NewRoomActor(cmd.Config.Mode, cmd.Config.Size, cmd.Config.Wordlist, cmd.Config.FreeSpace, roomLogger)
+			actor, err := NewRoomActor(cmd.Slug, cmd.Config.Mode, cmd.Config.Size, cmd.Config.Wordlist, cmd.Config.FreeSpace, roomLogger, cmd.SaveEvent, cmd.InitialEvents)
 			if err != nil {
 				r.logger.Error("Failed to create room actor", slog.String("slug", cmd.Slug), slog.String("error", err.Error()))
 				cmd.ReplyTo <- nil

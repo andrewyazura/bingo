@@ -119,3 +119,37 @@ func GetRoomPasswordHash(db *sql.DB, roomSlug string) (string, error) {
 	}
 	return *hash, nil
 }
+
+func LoadEventsForRoom(db *sql.DB, roomSlug string) ([]game.Event, error) {
+	query := `
+		SELECT event_type, player_id, tile_index, tile_word
+		FROM game_events
+		WHERE room_slug = $1
+		ORDER BY id ASC
+	`
+	rows, err := db.Query(query, roomSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []game.Event
+	for rows.Next() {
+		var eventType int
+		var playerID string
+		var tileIndex *int
+		var tileWord *string
+
+		if err := rows.Scan(&eventType, &playerID, &tileIndex, &tileWord); err != nil {
+			return nil, err
+		}
+
+		events = append(events, game.Event{
+			Type:      game.EventType(eventType),
+			PlayerID:  playerID,
+			TileIndex: tileIndex,
+			TileWord:  tileWord,
+		})
+	}
+	return events, rows.Err()
+}
