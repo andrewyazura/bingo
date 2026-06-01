@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bingo | Create Server</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <link id="theme-css" rel="stylesheet" href="/static/modern.css">
+    <link id="theme-css" rel="stylesheet" href="/static/modern.css?v=2">
     <style>
         .field-row {
             margin-bottom: 16px;
@@ -31,6 +31,40 @@
             padding: 6px;
             border: 2px inset #5a645a;
         }
+        .board-preview {
+            display: grid;
+            gap: 4px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            margin-top: 8px;
+        }
+        .preview-tile {
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .preview-tile.free-space {
+            background-color: var(--accent-color, #00e5ff);
+            border-color: var(--accent-color, #00e5ff);
+        }
+        body.cs16-theme .preview-tile {
+            background-color: var(--secondary-bg);
+            border-color: var(--border-light) var(--border-dark) var(--border-dark) var(--border-light);
+            border-style: solid;
+            border-width: 2px;
+            border-radius: 0;
+        }
+        body.cs16-theme .preview-tile.free-space {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+        body.cs16-theme .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
     </style>
     <script>
         function toggleTheme() {
@@ -45,17 +79,95 @@
                 link.href = "https://cdn.jsdelivr.net/gh/ekmas/cs16.css@main/css/cs16.min.css";
                 document.body.classList.add('cs16-theme');
             } else {
-                link.href = "/static/modern.css";
+                link.href = "/static/modern.css?v=2";
                 document.body.classList.remove('cs16-theme');
             }
         }
+        
+        function updatePreview() {
+            const size = parseInt(document.getElementById('sizeInput').value, 10);
+            const freeSpace = document.getElementById('freeSpace').checked;
+            const preview = document.getElementById('boardPreview');
+            
+            if (!preview) return;
+            
+            preview.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            preview.innerHTML = '';
+            
+            const total = size * size;
+            const centerIndex = Math.floor(total / 2);
+            
+            for (let i = 0; i < total; i++) {
+                const tile = document.createElement('div');
+                tile.className = 'preview-tile';
+                if (freeSpace && size % 2 !== 0 && i === centerIndex) {
+                    tile.classList.add('free-space');
+                }
+                preview.appendChild(tile);
+            }
+        }
+        
+        function validateForm() {
+            const size = parseInt(document.getElementById('sizeInput').value, 10);
+            const freeSpace = document.getElementById('freeSpace').checked;
+            
+            let requiredWords = size * size;
+            if (freeSpace && size % 2 !== 0) {
+                requiredWords--;
+            }
+            
+            const wordlist = document.getElementById('wordlistInput').value;
+            const words = wordlist.split(',').map(w => w.trim()).filter(w => w.length > 0);
+            
+            const warningEl = document.getElementById('wordlistWarning');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (words.length < requiredWords) {
+                warningEl.innerText = `Need ${requiredWords} words (have ${words.length})`;
+                warningEl.style.display = 'inline';
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
+            } else {
+                warningEl.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             applyTheme(localStorage.getItem('theme') || 'modern');
+            
+            const sizeInput = document.getElementById('sizeInput');
+            if (sizeInput) {
+                sizeInput.addEventListener('input', (e) => {
+                    document.getElementById('sizeValueDisplay').innerText = e.target.value + 'x' + e.target.value;
+                    updatePreview();
+                    validateForm();
+                });
+            }
+            
+            const freeSpace = document.getElementById('freeSpace');
+            if (freeSpace) {
+                freeSpace.addEventListener('change', () => {
+                    updatePreview();
+                    validateForm();
+                });
+            }
+            
+            const wordlistInput = document.getElementById('wordlistInput');
+            if (wordlistInput) {
+                wordlistInput.addEventListener('input', validateForm);
+            }
+            
+            updatePreview();
+            validateForm();
         });
     </script>
 </head>
 <body>
-    <div class="window" style="max-width: 600px; margin: 0 auto;">
+    <div class="window" style="max-width: 800px; margin: 0 auto;">
         <div class="title-bar">
             <div class="title-bar-text">Bingo Server Setup</div>
             <div class="title-bar-controls">
@@ -69,7 +181,8 @@
                 <h1>Create Server</h1>
                 <button class="cs-btn" type="button" onclick="toggleTheme()">Switch Theme</button>
             </header>
-            <form action="/rooms" method="POST" class="form-container">
+            <div style="display: flex; gap: 32px; flex-wrap: wrap;">
+                <form action="/rooms" method="POST" class="form-container" style="flex: 1; min-width: 250px;">
                 <div class="field-row">
                     <label>Game Mode</label>
                     <select name="mode" class="cs-select">
@@ -78,25 +191,38 @@
                     </select>
                 </div>
                 <div class="field-row">
-                    <label>Grid Size</label>
-                    <input type="number" name="size" value="5" min="3" max="10">
+                    <label style="display: flex; justify-content: space-between;">
+                        <span>Grid Size</span>
+                        <span id="sizeValueDisplay">5x5</span>
+                    </label>
+                    <div class="cs-slider" style="width: 100%;">
+                        <input type="range" name="size" id="sizeInput" value="5" min="3" max="11" step="2" style="width: 100%;" oninput="document.getElementById('sizeValueDisplay').innerText = this.value + 'x' + this.value">
+                    </div>
                 </div>
-                <div class="field-row field-row-checkbox">
+                <div class="field-row field-row-checkbox cs-checkbox">
                     <input type="checkbox" name="freeSpace" id="freeSpace" value="true" checked>
-                    <label for="freeSpace">Center Free Space</label>
+                    <label for="freeSpace" class="cs-checkbox__label">Center Free Space</label>
                 </div>
                 <div class="field-row">
-                    <label>Wordlist (comma separated)</label>
-                    <textarea name="wordlist" rows="6">apple, banana, cherry, date, elderberry, fig, grape, honeydew, kiwi, lemon, mango, nectarine, orange, papaya, quince, raspberry, strawberry, tangerine, ugli, vanilla, watermelon, xigua, yam, zucchini, apricot</textarea>
+                    <label style="display: flex; justify-content: space-between;">
+                        <span>Wordlist (comma separated)</span>
+                        <span id="wordlistWarning" style="color: #ff5555; font-size: 13px; display: none;">Not enough words!</span>
+                    </label>
+                    <textarea name="wordlist" id="wordlistInput" rows="6">apple, banana, cherry, date, elderberry, fig, grape, honeydew, kiwi, lemon, mango, nectarine, orange, papaya, quince, raspberry, strawberry, tangerine, ugli, vanilla, watermelon, xigua, yam, zucchini, apricot</textarea>
                 </div>
                 <div class="field-row">
                     <label>Room Password (Optional)</label>
                     <input type="password" name="password" placeholder="Leave blank for public room">
                 </div>
                 <div class="actions">
-                    <button type="submit" class="cs-btn submit-btn">Start Game</button>
+                    <button type="submit" id="submitBtn" class="cs-btn submit-btn">Start Game</button>
                 </div>
             </form>
+            <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column;">
+                <label style="font-weight: 500; font-size: 14px; margin-bottom: 8px;">Board Preview</label>
+                <div id="boardPreview" class="board-preview"></div>
+            </div>
+            </div>
         </div>
     </div>
 </body>
