@@ -86,17 +86,15 @@ func (c *ClientActor) writePump() {
 				return
 			}
 
-			w, err := c.Conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-
 			html := strings.TrimSpace(RenderEvent(event, c.PlayerID, c.Room.Size))
 			if html != "" {
-				w.Write([]byte(html))
-			}
-			if err := w.Close(); err != nil {
-				return
+				c.Room.logger.Info("Sending WS message", slog.String("player_id", c.PlayerID), slog.Int("len", len(html)))
+				if err := c.Conn.WriteMessage(websocket.TextMessage, []byte(html)); err != nil {
+					c.Room.logger.Error("WS write error", slog.String("error", err.Error()))
+					return
+				}
+			} else {
+				c.Room.logger.Info("Empty HTML for event", slog.String("player_id", c.PlayerID), slog.Any("event_type", event.Type))
 			}
 
 		case <-ticker.C:
