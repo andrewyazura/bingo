@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"strings"
 )
 
 func RenderTile(index int, word string, marked bool, isOOB bool) string {
@@ -70,11 +69,12 @@ func RenderEvent(e Event, receiverID string, size int) string {
 		var buf bytes.Buffer
 		buf.WriteString(`<div id="opponents-sidebar" class="opponents-sidebar" hx-swap-oob="true">`)
 		for _, opp := range e.Opponents {
-			label := opp.PlayerID
-			if parts := strings.Split(opp.PlayerID, "_"); len(parts) > 1 {
-				label = parts[0]
-			} else if len(label) > 10 {
-				label = "Player " + label[len(label)-4:]
+			label := opp.PlayerName
+			if label == "" {
+				label = opp.PlayerID
+				if len(label) > 10 {
+					label = "Player " + label[len(label)-4:]
+				}
 			}
 			buf.WriteString(`<div class="mini-board-wrapper">`)
 			buf.WriteString(fmt.Sprintf(`<div class="mini-board-label">%s</div>`, template.HTMLEscapeString(label)))
@@ -108,9 +108,9 @@ func RenderEvent(e Event, receiverID string, size int) string {
 	case BingoEvent:
 		msg := "BINGO!"
 		if e.PlayerID != receiverID {
-			label := e.PlayerID
-			if parts := strings.Split(e.PlayerID, "_"); len(parts) > 1 {
-				label = parts[0]
+			label := e.PlayerName
+			if label == "" {
+				label = e.PlayerID
 			}
 			msg = template.HTMLEscapeString(label) + " got BINGO!"
 		}
@@ -123,9 +123,9 @@ func RenderEvent(e Event, receiverID string, size int) string {
 	case OneToBingoEvent:
 		label := "You are"
 		if e.PlayerID != receiverID {
-			label = e.PlayerID
-			if parts := strings.Split(e.PlayerID, "_"); len(parts) > 1 {
-				label = parts[0]
+			label := e.PlayerName
+			if label == "" {
+				label = e.PlayerID
 			}
 			label = template.HTMLEscapeString(label) + " is"
 		}

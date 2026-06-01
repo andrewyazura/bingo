@@ -41,7 +41,7 @@ func getOrSetPlayerID(w http.ResponseWriter, r *http.Request) string {
 	if err == nil && cookie.Value != "" {
 		return cookie.Value
 	}
-	newID := "guest_" + generateSlug()
+	newID := "guest-" + generateSlug()
 	http.SetCookie(w, &http.Cookie{
 		Name:     "player_id",
 		Value:    newID,
@@ -137,6 +137,18 @@ func BuildHandleViewRoom(getLobby func(slug string) (RoomConfig, error), checkRo
 			return
 		}
 
+		_, nameErr := r.Cookie("player_name")
+		if nameErr != nil {
+			tmpl, err := template.ParseFiles("web/templates/name_prompt.html")
+			if err != nil {
+				renderError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html")
+			tmpl.Execute(w, struct{ Slug string }{Slug: slug})
+			return
+		}
+
 		if config.HasPassword {
 			hasAccess, err := checkRoomAccess(slug, playerID)
 			if err != nil {
@@ -153,17 +165,6 @@ func BuildHandleViewRoom(getLobby func(slug string) (RoomConfig, error), checkRo
 				tmpl.Execute(w, struct{ Slug string }{Slug: slug})
 				return
 			}
-		}
-
-		if !strings.Contains(playerID, "_") {
-			tmpl, err := template.ParseFiles("web/templates/name_prompt.html")
-			if err != nil {
-				renderError(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Type", "text/html")
-			tmpl.Execute(w, struct{ Slug string }{Slug: slug})
-			return
 		}
 
 		tmpl, err := template.ParseFiles("web/templates/room.html")
@@ -273,7 +274,7 @@ func BuildHandleAuthRoom(getRoomPasswordHash func(string) (string, error), grant
 func BuildHandleNameRoom() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
-		playerID := getOrSetPlayerID(w, r)
+		_ = getOrSetPlayerID(w, r)
 
 		if err := r.ParseForm(); err != nil {
 			renderError(w, "Failed to parse form", http.StatusBadRequest)
@@ -286,19 +287,11 @@ func BuildHandleNameRoom() http.HandlerFunc {
 			return
 		}
 
-		
-		baseID := playerID
-		if parts := strings.Split(playerID, "_"); len(parts) > 1 {
-			baseID = parts[1]
-		}
-
-		newID := fmt.Sprintf("%s_%s", playerName, baseID)
-
 		http.SetCookie(w, &http.Cookie{
-			Name:     "player_id",
-			Value:    newID,
+			Name:     "player_name",
+			Value:    playerName,
 			Path:     "/",
-			HttpOnly: true,
+			HttpOnly: false,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   86400 * 365,

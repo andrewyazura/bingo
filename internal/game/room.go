@@ -23,10 +23,11 @@ const (
 )
 
 type Command struct {
-	Type      CommandType
-	PlayerID  string
-	TileIndex int
-	ReplyTo   chan Event
+	Type       CommandType
+	PlayerID   string
+	PlayerName string
+	TileIndex  int
+	ReplyTo    chan Event
 }
 
 type EventType int
@@ -41,17 +42,19 @@ const (
 )
 
 type OpponentBoardState struct {
-	PlayerID string
-	Board    *Board
+	PlayerID   string
+	PlayerName string
+	Board      *Board
 }
 
 type Event struct {
-	Type      EventType
-	PlayerID  string
-	TileIndex *int
-	TileWord  *string
-	Board     *Board
-	Opponents []OpponentBoardState
+	Type       EventType
+	PlayerID   string
+	PlayerName string
+	TileIndex  *int
+	TileWord   *string
+	Board      *Board
+	Opponents  []OpponentBoardState
 }
 
 type RoomActor struct {
@@ -61,6 +64,7 @@ type RoomActor struct {
 	FreeSpace bool
 
 	boards      map[string]*Board
+	playerNames map[string]string
 	subscribers map[string]chan Event
 	Inbox       chan Command
 	logger      *slog.Logger
@@ -73,8 +77,9 @@ func NewRoomActor(mode RoomMode, size int, wordlist []string, freeSpace bool, lo
 		Wordlist:    wordlist,
 		FreeSpace:   freeSpace,
 		boards:      make(map[string]*Board),
+		playerNames: make(map[string]string),
 		subscribers: make(map[string]chan Event),
-		Inbox:       make(chan Command, 100),
+		Inbox:       make(chan Command, 256),
 		logger:      logger,
 	}
 
@@ -94,9 +99,11 @@ func (a *RoomActor) Run() {
 		switch cmd.Type {
 		case SubscribeCommand:
 			a.subscribers[cmd.PlayerID] = cmd.ReplyTo
+			a.playerNames[cmd.PlayerID] = cmd.PlayerName
 			a.logger.Info("Player connected via WebSocket", slog.String("player_id", cmd.PlayerID))
 		case UnsubscribeCommand:
 			delete(a.subscribers, cmd.PlayerID)
+			delete(a.playerNames, cmd.PlayerID)
 			close(cmd.ReplyTo)
 			a.logger.Info("Player disconnected", slog.String("player_id", cmd.PlayerID))
 			a.broadcastOpponents()
@@ -133,8 +140,9 @@ func (a *RoomActor) broadcastOpponents() {
 		for _, oppID := range activePlayers {
 			if oppID != pID {
 				opps = append(opps, OpponentBoardState{
-					PlayerID: oppID,
-					Board:    a.boards[oppID],
+					PlayerID:   oppID,
+					PlayerName: a.playerNames[oppID],
+					Board:      a.boards[oppID],
 				})
 			}
 		}
@@ -176,9 +184,10 @@ func (a *RoomActor) Join(cmd *Command) error {
 
 	if sub, ok := a.subscribers[cmd.PlayerID]; ok {
 		sub <- Event{
-			Type:     BoardStateEvent,
-			PlayerID: cmd.PlayerID,
-			Board:    board,
+			Type:       BoardStateEvent,
+			PlayerID:   cmd.PlayerID,
+			PlayerName: a.playerNames[cmd.PlayerID],
+			Board:      board,
 		}
 	}
 
@@ -210,10 +219,11 @@ func (a *RoomActor) Mark(cmd *Command) error {
 	}
 
 	event := Event{
-		Type:      eventType,
-		PlayerID:  cmd.PlayerID,
-		TileIndex: &cmd.TileIndex,
-		TileWord:  word,
+		Type:       eventType,
+		PlayerID:   cmd.PlayerID,
+		PlayerName: a.playerNames[cmd.PlayerID],
+		TileIndex:  &cmd.TileIndex,
+		TileWord:   word,
 	}
 
 	if a.Mode == Collaborative {
@@ -231,13 +241,15 @@ func (a *RoomActor) Mark(cmd *Command) error {
 	if analysis.HasBingo {
 		a.logger.Info("Player achieved Bingo!", slog.String("player_id", cmd.PlayerID))
 		a.broadcast(Event{
-			Type:     BingoEvent,
-			PlayerID: cmd.PlayerID,
+			Type:       BingoEvent,
+			PlayerID:   cmd.PlayerID,
+			PlayerName: a.playerNames[cmd.PlayerID],
 		})
 	} else if analysis.MaxInLine == a.Size-1 {
 		a.broadcast(Event{
-			Type:     OneToBingoEvent,
-			PlayerID: cmd.PlayerID,
+			Type:       OneToBingoEvent,
+			PlayerID:   cmd.PlayerID,
+			PlayerName: a.playerNames[cmd.PlayerID],
 		})
 	}
 

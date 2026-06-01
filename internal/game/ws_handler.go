@@ -122,10 +122,16 @@ func ServeWS(actor *RoomActor, playerID string, w http.ResponseWriter, r *http.R
 		Room:     actor,
 	}
 
+	playerName := ""
+	if nameCookie, err := r.Cookie("player_name"); err == nil {
+		playerName = nameCookie.Value
+	}
+
 	actor.Inbox <- Command{
-		Type:     SubscribeCommand,
-		PlayerID: playerID,
-		ReplyTo:  client.Inbox,
+		Type:       SubscribeCommand,
+		PlayerID:   playerID,
+		PlayerName: playerName,
+		ReplyTo:    client.Inbox,
 	}
 
 	actor.Inbox <- Command{
