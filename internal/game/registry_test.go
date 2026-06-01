@@ -46,7 +46,6 @@ func TestRegistryActor_CreateAndGet(t *testing.T) {
 		t.Fatalf("expected created actor, got nil")
 	}
 
-	// Now try to Get it
 	registry.Inbox <- RegistryCommand{
 		Type:    GetRoomCmd,
 		Slug:    "my-room",

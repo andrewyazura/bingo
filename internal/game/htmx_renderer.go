@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"strings"
 )
 
 func RenderTile(index int, word string, marked bool, isOOB bool) string {
@@ -70,7 +71,9 @@ func RenderEvent(e Event, receiverID string, size int) string {
 		buf.WriteString(`<div id="opponents-sidebar" class="opponents-sidebar" hx-swap-oob="true">`)
 		for _, opp := range e.Opponents {
 			label := opp.PlayerID
-			if len(label) > 10 {
+			if parts := strings.Split(opp.PlayerID, "_"); len(parts) > 1 {
+				label = parts[0]
+			} else if len(label) > 10 {
 				label = "Player " + label[len(label)-4:]
 			}
 			buf.WriteString(`<div class="mini-board-wrapper">`)
@@ -86,7 +89,7 @@ func RenderEvent(e Event, receiverID string, size int) string {
 
 	case TileMarkedEvent:
 		res := ""
-		if e.PlayerID == receiverID {
+		if e.PlayerID == receiverID || e.PlayerID == "global" {
 			res += RenderTile(*e.TileIndex, *e.TileWord, true, true)
 		} else {
 			res += RenderMiniTileOOB(e.PlayerID, *e.TileIndex, true)
@@ -95,7 +98,7 @@ func RenderEvent(e Event, receiverID string, size int) string {
 
 	case TileUnmarkedEvent:
 		res := ""
-		if e.PlayerID == receiverID {
+		if e.PlayerID == receiverID || e.PlayerID == "global" {
 			res += RenderTile(*e.TileIndex, *e.TileWord, false, true)
 		} else {
 			res += RenderMiniTileOOB(e.PlayerID, *e.TileIndex, false)
@@ -103,11 +106,32 @@ func RenderEvent(e Event, receiverID string, size int) string {
 		return res
 
 	case BingoEvent:
-		return `
+		msg := "BINGO!"
+		if e.PlayerID != receiverID {
+			label := e.PlayerID
+			if parts := strings.Split(e.PlayerID, "_"); len(parts) > 1 {
+				label = parts[0]
+			}
+			msg = template.HTMLEscapeString(label) + " got BINGO!"
+		}
+		return fmt.Sprintf(`
 		<div id="victory-modal" hx-swap-oob="true">
-			<div class="victory-text">BINGO!</div>
+			<div class="victory-text">%s</div>
 			<button class="cs-btn" onclick="document.getElementById('victory-modal').remove()">Keep Playing</button>
-		</div>`
+		</div>`, msg)
+
+	case OneToBingoEvent:
+		label := "You are"
+		if e.PlayerID != receiverID {
+			label = e.PlayerID
+			if parts := strings.Split(e.PlayerID, "_"); len(parts) > 1 {
+				label = parts[0]
+			}
+			label = template.HTMLEscapeString(label) + " is"
+		}
+		return fmt.Sprintf(`<div id="toast-container" hx-swap-oob="beforeend">
+			<div class="toast" style="animation: slide-in 0.3s ease-out, fade-out 0.5s ease-in 4.5s forwards;">%s one tile away from BINGO!</div>
+		</div>`, label)
 
 	default:
 		return ""

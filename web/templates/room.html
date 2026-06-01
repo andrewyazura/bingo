@@ -132,6 +132,33 @@
             animation: pop 0.5s ease-out;
         }
 
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2000;
+        }
+        .toast {
+            background-color: var(--secondary-bg, #222);
+            color: var(--text-color, #eee);
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid var(--accent-color, #0f0);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            font-weight: bold;
+        }
+        @keyframes slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fade-out {
+            from { opacity: 1; }
+            to { opacity: 0; visibility: hidden; }
+        }
+
         .main-layout {
             display: flex;
             gap: 20px;
@@ -221,5 +248,7 @@
             </div>
         </div>
     </div>
+    
+    <div id="toast-container"></div>
 </body>
 </html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo | Enter Name</title>
+    <link id="theme-css" rel="stylesheet" href="/static/modern.css">
+    <style>
+        .field-row {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        body.cs16-theme {
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        body.cs16-theme .window {
+            max-width: 400px;
+            width: 100%;
+        }
+        body.cs16-theme input[type="text"] {
+            background-color: #2b312b;
+            color: #d1d1d1;
+            padding: 6px;
+            border: 2px inset #5a645a;
+        }
+        .container {
+            max-width: 400px;
+            margin: 40px auto;
+        }
+    </style>
+    <script>
+        function applyTheme() {
+            const theme = localStorage.getItem('theme') || 'modern';
+            const link = document.getElementById('theme-css');
+            if (theme === 'cs16') {
+                link.href = "https://cdn.jsdelivr.net/gh/ekmas/cs16.css@main/css/cs16.min.css";
+                document.body.classList.add('cs16-theme');
+            } else {
+                link.href = "/static/modern.css";
+                document.body.classList.remove('cs16-theme');
+            }
+        }
+        document.addEventListener('DOMContentLoaded', applyTheme);
+    </script>
+</head>
+<body>
+    <div class="window container">
+        <div class="title-bar">
+            <div class="title-bar-text">Join Room</div>
+            <div class="title-bar-controls">
+                <button aria-label="Close"></button>
+            </div>
+        </div>
+        <div class="window-body">
+            <header class="header" style="margin-bottom: 20px;">
+                <h1>Who are you?</h1>
+            </header>
+            <form action="/room/{{.Slug}}/name" method="POST">
+                <div class="field-row">
+                    <label>Nickname</label>
+                    <input type="text" name="player_name" required autofocus placeholder="Enter your name">
+                </div>
+                <div class="actions">
+                    <button type="submit" class="cs-btn">Continue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

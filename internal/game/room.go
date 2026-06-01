@@ -217,10 +217,10 @@ func (a *RoomActor) Mark(cmd *Command) error {
 	}
 
 	if a.Mode == Collaborative {
-		a.broadcast(event)
-	} else {
-		a.broadcast(event)
+		event.PlayerID = "global"
 	}
+
+	a.broadcast(event)
 
 	if !isMarked {
 		return nil
@@ -231,15 +231,13 @@ func (a *RoomActor) Mark(cmd *Command) error {
 	if analysis.HasBingo {
 		a.logger.Info("Player achieved Bingo!", slog.String("player_id", cmd.PlayerID))
 		a.broadcast(Event{
-			Type:      BingoEvent,
-			PlayerID:  cmd.PlayerID,
-			TileIndex: nil,
+			Type:     BingoEvent,
+			PlayerID: cmd.PlayerID,
 		})
 	} else if analysis.MaxInLine == a.Size-1 {
 		a.broadcast(Event{
-			Type:      OneToBingoEvent,
-			PlayerID:  cmd.PlayerID,
-			TileIndex: nil,
+			Type:     OneToBingoEvent,
+			PlayerID: cmd.PlayerID,
 		})
 	}
 

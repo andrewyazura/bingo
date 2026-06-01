@@ -47,7 +47,7 @@ func getOrSetPlayerID(w http.ResponseWriter, r *http.Request) string {
 		Value:    newID,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false, // Set to true in prod with HTTPS
+		Secure:   false, 
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   86400 * 365,
 	})
@@ -155,6 +155,17 @@ func BuildHandleViewRoom(getLobby func(slug string) (RoomConfig, error), checkRo
 			}
 		}
 
+		if !strings.Contains(playerID, "_") {
+			tmpl, err := template.ParseFiles("web/templates/name_prompt.html")
+			if err != nil {
+				renderError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html")
+			tmpl.Execute(w, struct{ Slug string }{Slug: slug})
+			return
+		}
+
 		tmpl, err := template.ParseFiles("web/templates/room.html")
 		if err != nil {
 			renderError(w, err.Error(), http.StatusInternalServerError)
@@ -237,14 +248,14 @@ func BuildHandleAuthRoom(getRoomPasswordHash func(string) (string, error), grant
 		}
 
 		if hash == "" {
-			// Room has no password
+			
 			http.Redirect(w, r, fmt.Sprintf("/room/%s", slug), http.StatusSeeOther)
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 		if err != nil {
-			// Incorrect password, just re-render or redirect back
+			
 			renderError(w, "Incorrect password", http.StatusUnauthorized)
 			return
 		}
@@ -254,6 +265,44 @@ func BuildHandleAuthRoom(getRoomPasswordHash func(string) (string, error), grant
 			renderError(w, "Failed to grant access", http.StatusInternalServerError)
 			return
 		}
+
+		http.Redirect(w, r, fmt.Sprintf("/room/%s", slug), http.StatusSeeOther)
+	}
+}
+
+func BuildHandleNameRoom() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		slug := r.PathValue("slug")
+		playerID := getOrSetPlayerID(w, r)
+
+		if err := r.ParseForm(); err != nil {
+			renderError(w, "Failed to parse form", http.StatusBadRequest)
+			return
+		}
+
+		playerName := strings.TrimSpace(r.FormValue("player_name"))
+		if playerName == "" {
+			renderError(w, "Name is required", http.StatusBadRequest)
+			return
+		}
+
+		
+		baseID := playerID
+		if parts := strings.Split(playerID, "_"); len(parts) > 1 {
+			baseID = parts[1]
+		}
+
+		newID := fmt.Sprintf("%s_%s", playerName, baseID)
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "player_id",
+			Value:    newID,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   86400 * 365,
+		})
 
 		http.Redirect(w, r, fmt.Sprintf("/room/%s", slug), http.StatusSeeOther)
 	}

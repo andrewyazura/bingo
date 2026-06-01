@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -90,7 +91,7 @@ func (c *ClientActor) writePump() {
 				return
 			}
 
-			html := RenderEvent(event, c.PlayerID, c.Room.Size)
+			html := strings.TrimSpace(RenderEvent(event, c.PlayerID, c.Room.Size))
 			if html != "" {
 				w.Write([]byte(html))
 			}

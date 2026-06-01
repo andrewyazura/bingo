@@ -65,6 +65,7 @@ func main() {
 	mux.HandleFunc("POST /rooms", game.BuildHandleCreateRoom(saveLobby))
 	mux.HandleFunc("GET /room/{slug}", game.BuildHandleViewRoom(getLobby, checkRoomAccess))
 	mux.HandleFunc("POST /room/{slug}/auth", game.BuildHandleAuthRoom(getRoomPasswordHash, grantRoomAccess))
+	mux.HandleFunc("POST /room/{slug}/name", game.BuildHandleNameRoom())
 	mux.HandleFunc("GET /ws/room/{slug}", game.BuildHandleRoomWS(registry, getLobby, checkRoomAccess))
 
 	handler := web.LoggerMiddleware(mux)

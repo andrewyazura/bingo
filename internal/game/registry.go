@@ -7,8 +7,8 @@ type RoomConfig struct {
 	Size        int
 	Wordlist    []string
 	FreeSpace   bool
-	Password    string `json:"-"` // Used for creation
-	HasPassword bool   // Used for view to know if it's protected
+	Password    string `json:"-"` 
+	HasPassword bool   
 }
 
 type RegistryCommandType int
