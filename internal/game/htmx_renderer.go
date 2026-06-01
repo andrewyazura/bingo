@@ -77,8 +77,8 @@ func RenderEvent(e Event, receiverID string, size int) string {
 				}
 			}
 			buf.WriteString(`<div class="mini-board-wrapper">`)
-			buf.WriteString(fmt.Sprintf(`<div class="mini-board-label">%s</div>`, template.HTMLEscapeString(label)))
-			buf.WriteString(fmt.Sprintf(`<div id="mini-board-%s" class="mini-board" style="grid-template-columns: repeat(%d, 1fr);">`, template.HTMLEscapeString(opp.PlayerID), size))
+			fmt.Fprintf(&buf, `<div class="mini-board-label">%s</div>`, template.HTMLEscapeString(label))
+			fmt.Fprintf(&buf, `<div id="mini-board-%s" class="mini-board" style="grid-template-columns: repeat(%d, 1fr);">`, template.HTMLEscapeString(opp.PlayerID), size)
 			for i := range opp.Board.Words {
 				buf.WriteString(RenderMiniTile(opp.PlayerID, i, opp.Board.Marks[i]))
 			}

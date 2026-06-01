@@ -10,8 +10,8 @@ type RoomConfig struct {
 	Size        int
 	Wordlist    []string
 	FreeSpace   bool
-	Password    string `json:"-"` 
-	HasPassword bool   
+	Password    string `json:"-"`
+	HasPassword bool
 }
 
 func (c RoomConfig) Validate() error {

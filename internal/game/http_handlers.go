@@ -47,7 +47,7 @@ func getOrSetPlayerID(w http.ResponseWriter, r *http.Request) string {
 		Value:    newID,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false, 
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   86400 * 365,
 	})
@@ -108,11 +108,11 @@ func BuildHandleCreateRoom(saveLobby func(slug string, config RoomConfig) error)
 		}
 
 		config := RoomConfig{
-			Mode:      RoomMode(mode),
-			Size:      size,
-			Wordlist:  wordlist,
-			FreeSpace: freeSpace,
-			Password:  hashedPassword,
+			Mode:        RoomMode(mode),
+			Size:        size,
+			Wordlist:    wordlist,
+			FreeSpace:   freeSpace,
+			Password:    hashedPassword,
 			HasPassword: password != "",
 		}
 
@@ -257,14 +257,14 @@ func BuildHandleAuthRoom(getRoomPasswordHash func(string) (string, error), grant
 		}
 
 		if hash == "" {
-			
+
 			http.Redirect(w, r, fmt.Sprintf("/room/%s", slug), http.StatusSeeOther)
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 		if err != nil {
-			
+
 			renderError(w, "Incorrect password", http.StatusUnauthorized)
 			return
 		}
