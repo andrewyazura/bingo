@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"html/template"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
+
+	"bingo/internal/platform/web"
 )
 
 func generateSlug() string {
@@ -84,7 +86,8 @@ func BuildHandleCreateRoom(saveLobby func(slug string, config RoomConfig) error)
 		})
 		if err != nil {
 			http.Error(w, "Failed to save lobby", http.StatusInternalServerError)
-			log.Printf("DB error: %v", err)
+			traceID, _ := r.Context().Value(web.TraceIDKey).(string)
+			slog.Error("Failed to save lobby", slog.String("trace_id", traceID), slog.String("error", err.Error()))
 			return
 		}
 

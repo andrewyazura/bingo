@@ -2,7 +2,7 @@ package game
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -51,7 +51,9 @@ func (c *ClientActor) readPump() {
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			log.Println(err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				c.Room.logger.Error("WebSocket read error", slog.String("error", err.Error()), slog.String("player_id", c.PlayerID))
+			}
 			break
 		}
 
@@ -108,7 +110,7 @@ func (c *ClientActor) writePump() {
 func ServeWS(actor *RoomActor, playerID string, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		actor.logger.Error("Failed to upgrade websocket", slog.String("error", err.Error()), slog.String("player_id", playerID))
 		return
 	}
 

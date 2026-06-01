@@ -1,5 +1,7 @@
 package game
 
+import "log/slog"
+
 type RoomConfig struct {
 	Mode      RoomMode
 	Size      int
@@ -24,12 +26,14 @@ type RegistryCommand struct {
 type RegistryActor struct {
 	Inbox  chan RegistryCommand
 	actors map[string]*RoomActor
+	logger *slog.Logger
 }
 
-func NewRegistryActor() *RegistryActor {
+func NewRegistryActor(logger *slog.Logger) *RegistryActor {
 	return &RegistryActor{
 		Inbox:  make(chan RegistryCommand, 100),
 		actors: make(map[string]*RoomActor),
+		logger: logger,
 	}
 }
 
@@ -45,14 +49,17 @@ func (r *RegistryActor) Run() {
 				continue
 			}
 
-			actor, err := NewRoomActor(cmd.Config.Mode, cmd.Config.Size, cmd.Config.Wordlist, cmd.Config.FreeSpace)
+			roomLogger := r.logger.With("room_slug", cmd.Slug, "mode", cmd.Config.Mode)
+			actor, err := NewRoomActor(cmd.Config.Mode, cmd.Config.Size, cmd.Config.Wordlist, cmd.Config.FreeSpace, roomLogger)
 			if err != nil {
+				r.logger.Error("Failed to create room actor", slog.String("slug", cmd.Slug), slog.String("error", err.Error()))
 				cmd.ReplyTo <- nil
 				continue
 			}
 
 			go actor.Run()
 			r.actors[cmd.Slug] = actor
+			r.logger.Info("Room created", slog.String("slug", cmd.Slug), slog.Int("size", cmd.Config.Size))
 			cmd.ReplyTo <- actor
 		}
 	}

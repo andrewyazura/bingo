@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"log/slog"
 	"math/rand"
 )
 
@@ -55,9 +56,10 @@ type RoomActor struct {
 	boards      map[string]*Board
 	subscribers map[string]chan Event
 	Inbox       chan Command
+	logger      *slog.Logger
 }
 
-func NewRoomActor(mode RoomMode, size int, wordlist []string, freeSpace bool) (*RoomActor, error) {
+func NewRoomActor(mode RoomMode, size int, wordlist []string, freeSpace bool, logger *slog.Logger) (*RoomActor, error) {
 	actor := &RoomActor{
 		Mode:        mode,
 		Size:        size,
@@ -66,6 +68,7 @@ func NewRoomActor(mode RoomMode, size int, wordlist []string, freeSpace bool) (*
 		boards:      make(map[string]*Board),
 		subscribers: make(map[string]chan Event),
 		Inbox:       make(chan Command, 100),
+		logger:      logger,
 	}
 
 	if mode == Collaborative {
@@ -84,9 +87,11 @@ func (a *RoomActor) Run() {
 		switch cmd.Type {
 		case SubscribeCommand:
 			a.subscribers[cmd.PlayerID] = cmd.ReplyTo
+			a.logger.Info("Player connected via WebSocket", slog.String("player_id", cmd.PlayerID))
 		case UnsubscribeCommand:
 			delete(a.subscribers, cmd.PlayerID)
 			close(cmd.ReplyTo)
+			a.logger.Info("Player disconnected", slog.String("player_id", cmd.PlayerID))
 		case JoinCommand:
 			a.Join(&cmd)
 		case MarkCommand:
@@ -184,6 +189,7 @@ func (a *RoomActor) Mark(cmd *Command) error {
 	analysis := board.Analyze(cmd.TileIndex)
 
 	if analysis.HasBingo {
+		a.logger.Info("Player achieved Bingo!", slog.String("player_id", cmd.PlayerID))
 		a.broadcast(Event{
 			Type:      BingoEvent,
 			PlayerID:  cmd.PlayerID,

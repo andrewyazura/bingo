@@ -1,15 +1,19 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
 	"bingo/internal/game"
 	"bingo/internal/platform/db"
+	"bingo/internal/platform/web"
 )
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	slog.SetDefault(logger)
+
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		dsn = "postgres://user:password@localhost:5432/bingo?sslmode=disable"
@@ -17,7 +21,8 @@ func main() {
 
 	dbConn, err := db.Connect(dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		slog.Error("Failed to connect to database", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer dbConn.Close()
 
@@ -40,18 +45,19 @@ func main() {
 		);
 	`)
 	if err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+		slog.Error("Failed to run migrations", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
 	saveLobby := db.BuildSaveLobbyClosure(dbConn)
 	getLobby := db.BuildGetLobbyClosure(dbConn)
 
-	registry := game.NewRegistryActor()
+	registry := game.NewRegistryActor(slog.Default())
 	go registry.Run()
 
 	mux := http.NewServeMux()
 
-	log.Println("🎮 Starting Bingo Server on :8080...")
+	slog.Info("🎮 Starting Bingo Server", slog.String("port", "8080"))
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 
@@ -60,7 +66,10 @@ func main() {
 	mux.HandleFunc("GET /room/{slug}", game.BuildHandleViewRoom())
 	mux.HandleFunc("GET /ws/room/{slug}", game.BuildHandleRoomWS(registry, getLobby))
 
-	if err := http.ListenAndServe("0.0.0.0:8080", mux); err != nil {
-		log.Fatal(err)
+	handler := web.LoggerMiddleware(mux)
+
+	if err := http.ListenAndServe("0.0.0.0:8080", handler); err != nil {
+		slog.Error("Server failed", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 }
