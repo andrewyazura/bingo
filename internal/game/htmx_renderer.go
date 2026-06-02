@@ -101,7 +101,7 @@ func RenderEvent(e Event, receiverID string, size int) string {
 				label = e.PlayerID
 			}
 			msg := template.HTMLEscapeString(label) + " marked " + template.HTMLEscapeString(*e.TileWord)
-			res += fmt.Sprintf(`<div id="event-log" hx-swap-oob="afterbegin"><div class="log-entry">%s</div></div>`, msg)
+			res += fmt.Sprintf(`<div id="event-log" hx-swap-oob="afterbegin"><div class="log-entry">%s<script>highlightWord("%s");</script></div></div>`, msg, template.JSEscapeString(*e.TileWord))
 		}
 		return res
 
