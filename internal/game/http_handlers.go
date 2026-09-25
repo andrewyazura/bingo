@@ -276,14 +276,12 @@ func BuildHandleAuthRoom(getRoomPasswordHash func(string) (string, error), grant
 		}
 
 		if hash == "" {
-
 			http.Redirect(w, r, fmt.Sprintf("/room/%s", slug), http.StatusSeeOther)
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 		if err != nil {
-
 			renderError(w, "Incorrect password", http.StatusUnauthorized)
 			return
 		}
